@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="notebook://C:/Users/kolya/PycharmProjects/xsolla-backend-test/test.ipynb" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/test.py" dialect="GenericSQL" />
+    <file url="PROJECT" dialect="SQLite" />
+  </component>
+</project>
