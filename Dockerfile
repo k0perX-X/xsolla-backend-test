@@ -3,7 +3,6 @@ MAINTAINER k0perXD@ya.ru
 
 EXPOSE 80
 EXPOSE 443
-EXPOSE 5432
 
 RUN apk update && apk upgrade
 
