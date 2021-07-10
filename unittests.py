@@ -61,7 +61,7 @@ class Tests(unittest.TestCase):
         r = requests.post('http://localhost/goods/batch', json=[{
             'product_name': '123',
             'category': None,
-            'sku': "123",
+            'sku': "250",
             'price': 300
         } for i in range(10000)])
         print(r)
@@ -132,8 +132,17 @@ class Tests(unittest.TestCase):
         self.assertEqual(r.status_code, 400)
 
     def test_put_element(self):
+        r = requests.post('http://localhost/goods/element', json={
+            'product_name': '123',
+            'category': None,
+            'sku': "123",
+            'price': 300
+        })
+        print(r)
+        j1 = json.loads(r.text)
+        self.assertEqual(r.status_code, 201)
         r = requests.put('http://localhost/goods/element', json={
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'product_name': '0',
                 'category': 'фигня',
@@ -146,7 +155,7 @@ class Tests(unittest.TestCase):
         pprint(j)
         self.assertEqual(r.status_code, 200)
         r = requests.put('http://localhost/goods/element', json={
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'product_id': 2,
             }
@@ -156,7 +165,7 @@ class Tests(unittest.TestCase):
         pprint(j)
         self.assertEqual(r.status_code, 400)
         r = requests.put('http://localhost/goods/element', json={
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'sku': None,
             }
@@ -166,7 +175,7 @@ class Tests(unittest.TestCase):
         pprint(j)
         self.assertEqual(r.status_code, 400)
         r = requests.put('http://localhost/goods/element', json={
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'price': 'awdawdaw'
             }
@@ -177,8 +186,17 @@ class Tests(unittest.TestCase):
         self.assertEqual(r.status_code, 400)
 
     def test_put_batch(self):
+        r = requests.post('http://localhost/goods/element', json={
+            'product_name': '123',
+            'category': None,
+            'sku': "123",
+            'price': 300
+        })
+        print(r)
+        j1 = json.loads(r.text)
+        self.assertEqual(r.status_code, 201)
         r = requests.put('http://localhost/goods/batch', json=[{
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'product_name': '0',
                 'category': 'фигня',
@@ -186,17 +204,17 @@ class Tests(unittest.TestCase):
                 'price': 3000
             }
         }, {
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'product_id': 2,
             }
         }, {
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'sku': None,
             }
         }, {
-            'product_id': 2,
+            'product_id': j1['data']['product_id'],
             'edit_data': {
                 'price': 'awdawdaw'
             }
@@ -296,9 +314,9 @@ class Tests(unittest.TestCase):
         self.assertEqual(j['data'][0]['data']['data']['deleted_rows'], 1)
         self.assertEqual(j['data'][1]['data']['data']['deleted_rows'], 2)
 
-    def test_delete_elementSKU123(self):
+    def test_delete_elementSKU250(self):
         r = requests.delete('http://localhost/goods/element', json={
-            'sku': 123
+            'sku': 250
         })
         print(r)
         j = json.loads(r.text)

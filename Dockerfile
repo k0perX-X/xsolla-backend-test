@@ -51,4 +51,4 @@ RUN mkdir /var/lib/postgresql/data
 COPY . /app
 RUN chmod +x /app/docker/*
 
-CMD su root -c "sh /app/docker/startscript.sh" || sh /app/docker/startscript.sh
+CMD sh /app/docker/startscript.sh
