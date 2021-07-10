@@ -47,7 +47,8 @@ RUN openrc
 
 
 RUN mv /var/lib/postgresql/data /var/lib/postgresql/data1/
+RUN mkdir /var/lib/postgresql/data
 COPY . /app
 RUN chmod +x /app/docker/*
 
-CMD sh /app/docker/startscript.sh
+CMD su root -c "sh /app/docker/startscript.sh" || sh /app/docker/startscript.sh

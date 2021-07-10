@@ -16,3 +16,7 @@ jobs:
           heroku_app_name: k0per-xsolla
           heroku_email: kolya-perminov@ya.ru
           usedocker: true
+          docker_build_args: |
+            -p 80:80
+            -p 443:443
+            -u root
