@@ -1,2 +1,3 @@
-run:
-  web: docker run -p 80:80 -p 443:443 k0per/xsolla-school-backend-2021
+build:
+  docker:
+    web: Dockerfile
