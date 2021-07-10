@@ -62,13 +62,12 @@ def batch_get():
         return {"status": "JSONDecodeError", "status_code": 1}, 400
 
     t = elements_index_args_check(r)
-    logging.error(str(t))
     if type(t[0]) == dict:
         return t
     else:
         index, elements = t
 
-    cursor.execute("SELECT COUNT(*) FROM public.goods")
+    cursor.execute("SELECT COUNT(*) FROM goods")
     rows = cursor.fetchall()[0][0]
     cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
                    f"ORDER BY product_id LIMIT {elements} OFFSET {index}")
@@ -244,7 +243,7 @@ def batch_post():
     return {
                "status": "OK",
                "status_code": 0,
-               "data": [l]
+               "data": l
             }, status
 
 
@@ -349,7 +348,7 @@ def batch_put():
     return {
                "status": "OK",
                "status_code": 0,
-               "data": [l]
+               "data": l
             }, status
 
 
@@ -383,7 +382,7 @@ def delete_row(r: dict):
         return {
                    "status": "OK",
                    "status_code": 0,
-                   "deleted_rows": rows
+                   "data": {"deleted_rows": rows}
                }, 200
 
     # id
@@ -400,7 +399,7 @@ def delete_row(r: dict):
         return {
                    "status": "OK",
                    "status_code": 0,
-                   "deleted_rows": rows
+                   "data": {"deleted_rows": rows}
                }, 200
 
 
@@ -434,7 +433,7 @@ def batch_delete():
     return {
                "status": "OK",
                "status_code": 0,
-               "data": [l]
+               "data": l
             }, status
 
 

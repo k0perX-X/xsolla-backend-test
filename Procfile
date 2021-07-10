@@ -1,0 +1,1 @@
+web:  docker run -v C:\Users\kolya\PycharmProjects\xsolla-backend-test\data:/var/lib/postgresql/data -p 80:80 -p 443:443 k0per/xsolla-school-backend-2021
