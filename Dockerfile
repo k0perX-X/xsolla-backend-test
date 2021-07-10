@@ -50,4 +50,4 @@ RUN mv /var/lib/postgresql/data /var/lib/postgresql/data1/
 COPY . /app
 RUN chmod +x /app/docker/*
 
-ENTRYPOINT sh /app/docker/startscript.sh
+CMD sh /app/docker/startscript.sh
