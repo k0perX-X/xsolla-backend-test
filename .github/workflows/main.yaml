@@ -44,6 +44,6 @@ jobs:
           api_key: ${{ secrets.HEROKU_API_KEY }} # your  heroku api key
           app_name: k0per-xsolla # you aplication name
           dockerfile_path: "." # OPTIONAL: set the path to the folder wher the Dockerfile is located, the default is the rootDir
-          dockerfile_name: "." # OPTIONAL: Custom name to your dockerfile, like Dockerfile.dev
+          dockerfile_name: "Dockerfile" # OPTIONAL: Custom name to your dockerfile, like Dockerfile.dev
           options: "" # OPTIONAL: Docker Build Options
           formation: "web" # OPTIONAL: Docker Dyno Formation. By default is web
