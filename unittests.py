@@ -7,7 +7,7 @@ from multiprocessing.pool import Pool
 max_request_per_batch = 100
 max_elements_per_request = 2000
 
-url = 'localhost'  # 'xsolla.jelastic.regruhosting.ru'
+url = 'xsolla.jelastic.regruhosting.ru'  # 'localhost'  #
 
 
 class Tests(unittest.TestCase):

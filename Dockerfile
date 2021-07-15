@@ -39,6 +39,8 @@ USER postgres
 RUN mkdir /var/lib/postgresql/data
 RUN chmod 0700 /var/lib/postgresql/data
 RUN initdb -D /var/lib/postgresql/data
+RUN rm /var/lib/postgresql/data/postgresql.conf
+COPY docker/postgresql.conf /var/lib/postgresql/data
 RUN pg_ctl start -D /var/lib/postgresql/data && psql --command="CREATE DATABASE goods WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;"
 
 USER root
