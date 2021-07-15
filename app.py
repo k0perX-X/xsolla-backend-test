@@ -105,7 +105,7 @@ def request_data():  # TODO: это огромная дыра в безопас�
     if type(t[0]) == dict:
         return t
     else:
-        index, elements = t  # TODO: использовать
+        index, elements = t
 
     if 'and/or' not in r:
         return {"status": "InvalidJSONFormat: and/or not in json", "status_code": 2}, 400
@@ -167,10 +167,12 @@ def request_data():  # TODO: это огромная дыра в безопас�
     try:
         if r['and/or'].lower() == 'and':
             cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                           f"WHERE {' and '.join([i for i in lst])}; ")
+                           f"WHERE {' and '.join([i for i in lst])} "
+                           f"ORDER BY product_id LIMIT {elements} OFFSET {index}; ")
         elif r['and/or'].lower() == 'or':
             cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                           f"WHERE {' or '.join([i for i in lst])}; ")
+                           f"WHERE {' or '.join([i for i in lst])} "
+                           f"ORDER BY product_id LIMIT {elements} OFFSET {index}; ")
         else:
             return {"status": "InvalidJSONFormat: and/or is not correct", "status_code": 2}, 400
     except psycopg2.errors.NotNullViolation:
