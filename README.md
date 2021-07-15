@@ -1,5 +1,9 @@
 # Xsolla School 2021. Backend
 
+Есть возможность протестировать API на удаленном общем сервере: http://xsolla.jelastic.regruhosting.ru/
+
+Докер сразу поддерживает SSL протокол, но требуется отключать верификацию SSL при запросе. 
+
 ## Установка
 
 ### Рекомендуемый способ
@@ -40,4 +44,4 @@ $ sudo docker run -v /path/to/data/dir:/var/lib/postgresql/data -p 80:80 -p 443:
 
 ## OpenAPI
 
-Посмотреть API можно по ссылке: https://app.swaggerhub.com/apis-docs/k0per/Xsolla/0.3
+Посмотреть API можно по ссылке: https://app.swaggerhub.com/apis-docs/k0per/Xsolla/

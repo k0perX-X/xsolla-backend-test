@@ -3,7 +3,7 @@ info:
   description: >-
     Документация OpenAPI 3.0 для тестового задания в Xsolla School
     2021 Backend.
-  version: "0.3"
+  version: "0.3.2"
   title: Xsolla School 2021. Backend
   contact:
     email: kolya-perminov@ya.ru
@@ -451,8 +451,8 @@ paths:
           description: Too Many Requests
 
 
-#servers:
-#  - url: /k0per/Xsolla/0.3
+servers:
+  - url: xsolla.jelastic.regruhosting.ru
 
 
 components:
