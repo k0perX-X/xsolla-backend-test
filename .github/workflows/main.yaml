@@ -16,18 +16,34 @@ jobs:
 #           heroku_app_name: k0per-xsolla
 #           heroku_email: kolya-perminov@ya.ru
 #           usedocker: true
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v2
+#       - name: Build, Push and Deploy to Heroku # set whatever name you want to this step
+#         id: heroku
+#         uses: jctaveras/heroku-deploy@v1.0.0 # use the latest version of the action
+#         with:
+#           email: kolya-perminov@ya.ru # your heroku email
+#           api_key: ${{ secrets.HEROKU_API_KEY }} # your heroku api key
+#           app_name: k0per-xsolla # you aplication name
+#           dockerfile_path: 'Dockerfile' # set the path to the folder where the Dockerfile is located
+#           # options: '' # Docker Build Options
+#           # formation: '' # Docker Dyno Formation. By default is web
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Build, Push and Deploy to Heroku # set whatever name you want to this step
+      - name: Build, Push and Deploy to Heroku
         id: heroku
-        uses: jctaveras/heroku-deploy@v1.0.0 # use the latest version of the action
+        uses: Techmmunity/docker-heroku-deploy@v1.0.0 # use the latest version of the action
         with:
-          email: kolya-perminov@ya.ru # your heroku email
-          api_key: ${{ secrets.HEROKU_API_KEY }} # your heroku api key
+          email: kolya-perminov@ya.ru  # your heroku email
+          api_key: ${{ secrets.HEROKU_API_KEY }} # your  heroku api key
           app_name: k0per-xsolla # you aplication name
-          dockerfile_path: 'Dockerfile' # set the path to the folder where the Dockerfile is located
-          # options: '' # Docker Build Options
-          # formation: '' # Docker Dyno Formation. By default is web
+          dockerfile_path: "." # OPTIONAL: set the path to the folder wher the Dockerfile is located, the default is the rootDir
+          dockerfile_name: "." # OPTIONAL: Custom name to your dockerfile, like Dockerfile.dev
+          options: "" # OPTIONAL: Docker Build Options
+          formation: "web" # OPTIONAL: Docker Dyno Formation. By default is web
