@@ -7,7 +7,7 @@ cd /
 
 #scripts
 sh /app/docker/check_dir.sh
-sh /etc/local.d/postgres-custom.start
+sh /app/docker/postgres_start.sh
 
 #start
 nginx

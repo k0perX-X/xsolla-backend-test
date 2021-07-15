@@ -6,17 +6,18 @@ EXPOSE 443
 
 RUN apk update && apk upgrade
 
-RUN apk add gcc \
+RUN apk add \
+            gcc \
             musl-dev \
             python3 \
             py3-pip \
             python3-dev \
             postgresql \
             postgresql-dev \
-            openrc \
             openssl \
             nginx
-RUN pip3 install flask\
+RUN pip3 install \
+                 flask\
                  psycopg2 \
                  waitress
 
@@ -41,12 +42,6 @@ RUN initdb -D /var/lib/postgresql/data
 RUN pg_ctl start -D /var/lib/postgresql/data && psql --command="CREATE DATABASE goods WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;"
 
 USER root
-COPY docker/postgres-custom.start /etc/local.d/postgres-custom.start
-RUN chmod +x /etc/local.d/postgres-custom.start
-RUN rc-update add local default
-RUN openrc
-
-
 RUN mv /var/lib/postgresql/data /var/lib/postgresql/data1/
 RUN mkdir /var/lib/postgresql/data
 COPY . /app
