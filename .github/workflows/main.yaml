@@ -28,6 +28,6 @@ jobs:
           email: kolya-perminov@ya.ru # your heroku email
           api_key: ${{ secrets.HEROKU_API_KEY }} # your heroku api key
           app_name: k0per-xsolla # you aplication name
-          dockerfile_path: '' # set the path to the folder where the Dockerfile is located
+          dockerfile_path: 'Dockerfile' # set the path to the folder where the Dockerfile is located
           # options: '' # Docker Build Options
           # formation: '' # Docker Dyno Formation. By default is web
