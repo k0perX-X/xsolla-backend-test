@@ -17,7 +17,8 @@ RUN apk add gcc \
             openssl \
             nginx
 RUN pip3 install flask\
-                 psycopg2
+                 psycopg2 \
+                 waitress
 
 #nginx
 RUN adduser -D -g 'www' www

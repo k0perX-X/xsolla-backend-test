@@ -1,53 +1,800 @@
-swagger: '2.0'
+openapi: 3.0.0
 info:
-  description: 'Документация OpenAPI 2.0 (Swagger) для тестового задания в Xsolla School 2021 Backend.'
-  version: 0.2.2
+  description: >-
+    Документация OpenAPI 3.0 для тестового задания в Xsolla School
+    2021 Backend.
+  version: "0.3"
   title: Xsolla School 2021. Backend
   contact:
     email: kolya-perminov@ya.ru
-schemes:
-  - https
-  - http
+tags:
+  - name: request
+    description: Retrieving data from the database
+  - name: element
+    description: Changing data in the database about a single item
+  - name: batch
+    description: Changing data in the database about several elements at once
 paths:
   /goods/element:
     post:
-      description:
+      tags:
+        - element
+      summary: Adds a new product to the database
+      operationId: element_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/element_post'
+        required: true
+      description: Adds one record to the database
       responses:
-        '200':
+        '201':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/element_post_201'
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
     put:
-      description:
+      tags:
+        - element
+      summary: Edits a product in the database
+      operationId: element_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/element_put'
+        required: true
+      description: Edits one record in the database
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/element_put_200'
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
     get:
-      description:
+      tags:
+        - request
+      summary: Retrieving a product from the database
+      operationId: element_get
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/element_get_sku'
+                - $ref: '#/components/schemas/element_get_id'
+      description: Retrieving one record from the database. Allows you to search by both sku and product_id.
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/element_get_200'
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
     delete:
-      description:
+      tags:
+        - element
+      summary: Removes product in the database
+      operationId: element_delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/element_delete_sku'
+                - $ref: '#/components/schemas/element_delete_id'
+      description: Removes one record in the database. Allows you to search by both sku and product_id.
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/element_delete_200'
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
+
   /goods/batch:
     post:
-      description:
+      tags:
+        - batch
+      summary: Adds new products to the database
+      operationId: batch_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/element_post'
+        required: true
+      description: >-
+        Adds records to the database. In fact, these are several single
+        requests collected in an array.
       responses:
-        '200':
+        '201':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ststus:
+                    type: string
+                    example: OK
+                  status_code:
+                    type: integer
+                    format: byte
+                    example: 0
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        HTTP_status_code:
+                          type: integer
+                          example: 201
+                        data:
+                          $ref: '#/components/schemas/element_post_201'
+        '207':
+          description: Not all requests passed with code 201
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ststus:
+                    type: string
+                    example: OK
+                  status_code:
+                    type: integer
+                    format: byte
+                    example: 0
+                  data:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            HTTP_status_code:
+                              type: integer
+                              example: 201
+                            data:
+                              $ref: '#/components/schemas/element_post_201'
+                        - type: object
+                          properties:
+                            HTTP_status_code:
+                              type: integer
+                              example: 400
+                            data:
+                              allOf:
+                                - $ref: '#/components/schemas/400'
+                                - description: Resulting record
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
     put:
-      description:
+      tags:
+        - batch
+      summary: Edits products in the database
+      operationId: batch_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/element_put'
+        required: true
+      description: >-
+        Edits records in the database. In fact, these are several single
+        requests collected in an array.
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ststus:
+                    type: string
+                    example: OK
+                  status_code:
+                    type: integer
+                    format: byte
+                    example: 0
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        HTTP_status_code:
+                          type: integer
+                          example: 200
+                        data:
+                          $ref: '#/components/schemas/element_put_200'
+        '207':
+          description: Not all requests passed with code 200
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ststus:
+                    type: string
+                    example: OK
+                  status_code:
+                    type: integer
+                    format: byte
+                    example: 0
+                  data:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            HTTP_status_code:
+                              type: integer
+                              example: 200
+                            data:
+                              $ref: '#/components/schemas/element_put_200'
+                        - type: object
+                          properties:
+                            HTTP_status_code:
+                              type: integer
+                              example: 400
+                            data:
+                              allOf:
+                                - $ref: '#/components/schemas/400'
+                                - description: Resulting record
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
     get:
-      description:
+      tags:
+        - request
+      summary: Removes products in the database
+      operationId: batch_get
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/batch_get'
+        required: true
+      description: >-
+        Removes records in the database. In fact, these are several single
+        requests collected in an array.
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/element_get_200'
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
     delete:
-      description:
+      tags:
+        - batch
+      summary: Removes products in the database
+      operationId: batch_delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                anyOf:
+                  - $ref: '#/components/schemas/element_delete_sku'
+                  - $ref: '#/components/schemas/element_delete_id'
+        required: true
+      description: >-
+        Removes records in the database. In fact, these are several single
+        requests collected in an array.
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ststus:
+                    type: string
+                    example: OK
+                  status_code:
+                    type: integer
+                    format: byte
+                    example: 0
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        HTTP_status_code:
+                          type: integer
+                          example: 200
+                        data:
+                          $ref: '#/components/schemas/element_delete_200'
+        '207':
+          description: Not all requests passed with code 200
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ststus:
+                    type: string
+                    example: OK
+                  status_code:
+                    type: integer
+                    format: byte
+                    example: 0
+                  data:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            HTTP_status_code:
+                              type: integer
+                              example: 200
+                            data:
+                              $ref: '#/components/schemas/element_delete_200'
+                        - type: object
+                          properties:
+                            HTTP_status_code:
+                              type: integer
+                              example: 400
+                            data:
+                              allOf:
+                                - $ref: '#/components/schemas/400'
+                                - description: Resulting record
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
+
+  /goods/request:
+    get:
+      tags:
+        - request
+      summary: Removes products in the database
+      operationId: request_data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/request_data'
+        required: true
+      description: >-
+        Removes records in the database. In fact, these are several single
+        requests collected in an array.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/element_get_200'
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+        '429':
+          description: Too Many Requests
+
+
+#servers:
+#  - url: /k0per/Xsolla/0.3
+
+
+components:
+  schemas:
+    '400':
+      type: object
+      properties:
+        ststus:
+          type: string
+        status_code:
+          type: integer
+          format: byte
+          example: 1
+          description: >-
+            One of: 0 - OK, 1 - JSONDecodeError, 2 - InvalidJSONFormat, 3 -
+            NotNullViolation, 4 - InvalidTextRepresentation, 5 - IdNotInTable
+
+    row:
+      type: object
+      properties:
+        product_id:
+          type: integer
+          format: int64
+        product_name:
+          type: string
+        category:
+          type: string
+        sku:
+          type: string
+        price:
+          type: number
+          format: double
+          example: 1.1
+
+    element_post:
+      type: object
+      required:
+        - product_name
+        - category
+        - sku
+        - price
+      properties:
+        product_name:
+          type: string
+          format: string
+        category:
+          type: string
+          format: string
+        sku:
+          type: string
+          format: string
+        price:
+          type: number
+          format: double
+          example: 1.1
+
+    element_put:
+      type: object
+      required:
+        - product_id
+        - edit_data
+      properties:
+        product_id:
+          type: integer
+          format: int64
+        edit_data:
+          type: object
+          properties:
+            product_name:
+              type: string
+              format: string
+            category:
+              type: string
+              format: string
+            sku:
+              type: string
+              format: string
+            price:
+              type: number
+              format: double
+              example: 1.1
+
+    element_delete_sku:
+      type: object
+      required:
+        - sku
+      properties:
+        sku:
+          type: string
+
+    element_delete_id:
+      type: object
+      required:
+        - product_id
+      properties:
+        product_id:
+          type: integer
+          format: int64
+
+    element_get_sku:
+      type: object
+      required:
+        - sku
+        - elements
+        - index
+      properties:
+        sku:
+          type: string
+        elements:
+          description: Number of returned items
+          type: integer
+          format: int64
+          maximum: 2000
+          example: 1000
+          minimum: 0
+        index:
+          description: The item number from the selection from which to return
+          type: integer
+          format: int64
+          minimum: 0
+
+    element_get_id:
+      type: object
+      required:
+        - product_id
+      properties:
+        product_id:
+          type: integer
+          format: int64
+
+    element_post_201:
+      type: object
+      properties:
+        ststus:
+          type: string
+          example: OK
+        status_code:
+          type: integer
+          format: byte
+          example: 0
+        data:
+          allOf:
+            - $ref: '#/components/schemas/row'
+            - description: Resulting record
+
+    element_put_200:
+      type: object
+      properties:
+        ststus:
+          type: string
+          example: OK
+        status_code:
+          type: integer
+          format: byte
+          example: 0
+        data:
+          allOf:
+            - description: Resulting record
+            - $ref: '#/components/schemas/row'
+
+    element_get_200:
+      type: object
+      properties:
+        ststus:
+          type: string
+          example: OK
+        status_code:
+          type: integer
+          format: byte
+          example: 0
+        data:
+          type: object
+          properties:
+            rows:
+              type: integer
+              format: int64
+              example: 1
+            data:
+              type: array
+              items:
+                allOf:
+                  - description: Resulting record
+                  - $ref: '#/components/schemas/row'
+
+    element_delete_200:
+      type: object
+      properties:
+        ststus:
+          type: string
+          example: OK
+        status_code:
+          type: integer
+          format: byte
+          example: 0
+        data:
+          type: object
+          properties:
+            deleted_rows:
+              type: integer
+              format: int64
+
+    batch_get:
+      type: object
+      required:
+        - elements
+        - index
+      properties:
+        elements:
+          description: Number of returned items
+          type: integer
+          format: int64
+          maximum: 2000
+          example: 1000
+          minimum: 0
+        index:
+          description: The item number from the selection from which to return
+          type: integer
+          format: int64
+          minimum: 0
+
+    request_data:
+      type: object
+      required:
+        - elements
+        - index
+        - and/or
+      properties:
+        greater:
+          type: object
+          properties:
+            product_id:
+              type: integer
+            price:
+              type: integer
+        less:
+          type: object
+          properties:
+            product_id:
+              type: integer
+            price:
+              type: integer
+        equal:
+          type: object
+          properties:
+            product_id:
+              anyOf:
+                - type: array
+                  items:
+                    type: integer
+                - type: integer
+            product_name:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            category:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            sku:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            price:
+              anyOf:
+                - type: array
+                  items:
+                    type: integer
+                - type: integer
+        not_equal:
+          type: object
+          properties:
+            product_id:
+              anyOf:
+                - type: array
+                  items:
+                    type: integer
+                - type: integer
+            product_name:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            category:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            sku:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            price:
+              anyOf:
+                - type: array
+                  items:
+                    type: integer
+                - type: integer
+        like:
+          type: object
+          properties:
+            product_name:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            category:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            sku:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+        and/or:
+          type: string
+          enum:
+            - and
+            - or
+        elements:
+          description: Number of returned items
+          type: integer
+          format: int64
+          maximum: 2000
+          example: 1000
+          minimum: 0
+        index:
+          description: The item number from the selection from which to return
+          type: integer
+          format: int64
+          minimum: 0

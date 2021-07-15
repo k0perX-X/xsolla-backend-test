@@ -11,4 +11,5 @@ sh /etc/local.d/postgres-custom.start
 
 #start
 nginx
-cd /app && export FLASK_APP=app.py && flask run
+# cd /app && export FLASK_APP=app.py && flask run --no-debugger
+cd /app && python3 app.py

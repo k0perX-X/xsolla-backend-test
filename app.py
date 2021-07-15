@@ -2,16 +2,20 @@ from flask import Flask, request
 import psycopg2
 import json
 import logging
+import configparser
+
+config = configparser.ConfigParser()
+config.read("settings.ini")
 
 app = Flask(__name__)
-table_name = 'goods'
-commit_timer_seconds = 5
-max_elements_per_request = 2000
-logging.basicConfig(filename="/var/lib/postgresql/data/log.txt", level=logging.WARNING)
+max_elements_per_request = int(config["Settings"]["max_elements_per_request"])
+max_request_per_batch = int(config["Settings"]["max_request_per_batch"])
+logging.basicConfig(filename=config["Settings"]["log_file_path"], level=logging.WARNING)
 columns = ['product_id', 'product_name', 'category', 'sku', 'price']
+str_columns = ['product_name', 'category', 'sku']
 
-conn = psycopg2.connect(dbname='goods', user='postgres',
-                        password='', host='localhost')
+conn = psycopg2.connect(dbname=config["Database"]["dbname"], user=config["Database"]["user"],
+                        password=config["Database"]["password"], host=config["Database"]["host"])
 conn.autocommit = True
 cursor = conn.cursor()
 cursor.execute("""CREATE TABLE IF NOT EXISTS goods (
@@ -22,6 +26,8 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS goods (
     price real NOT NULL,
     PRIMARY KEY (product_id));""")
 
+# TODO: отправить огромное количество запросов
+# TODO: apiTokens
 
 # Status codes:
 # 0 - OK
@@ -30,6 +36,7 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS goods (
 # 3 - NotNullViolation
 # 4 - InvalidTextRepresentation
 # 5 - IdNotInTable
+
 
 def elements_index_args_check(r: dict) -> tuple:
     if 'index' not in r or 'elements' not in r:
@@ -44,10 +51,149 @@ def elements_index_args_check(r: dict) -> tuple:
         return {"status": "InvalidJSONFormat: elements is not digit", "status_code": 2}, 400
     else:
         elements = int(r['elements'])
+
     if elements > max_elements_per_request:
         return {"status": "InvalidJSONFormat: elements is greater than allowed", "status_code": 2}, 400
+    if elements < 1:
+        return {"status": "InvalidJSONFormat: elements is less than allowed", "status_code": 2}, 400
+    if index < 0:
+        return {"status": "InvalidJSONFormat: index is less than allowed", "status_code": 2}, 400
 
     return index, elements
+
+
+@app.route('/goods/request')
+def request_data():  # TODO: это огромная дыра в безопасности
+    # {
+    #     'greater': {
+    #         'product_id': 123,
+    #         'price': 123
+    #     },
+    #     'less': {
+    #         'product_id': 123,
+    #         'price': 123
+    #     },
+    #     'equal': {
+    #         'product_id': [123],
+    #         'product_name': ['123'],
+    #         'category': ['123'],
+    #         'sku': ['132'],
+    #         'price': [123]
+    #     },
+    #     'not_equal':{
+    #         'product_id': [123],
+    #         'product_name': ['123'],
+    #         'category': ['123'],
+    #         'sku': ['132'],
+    #         'price': [123]
+    #     },
+    #     'like': {
+    #         'product_name': ['123'],
+    #         'category': ['123'],
+    #         'sku': ['132'],
+    #     },
+    #     'and/or': 'and',
+    #     'elements': 100,
+    #     'index': 0
+    # }
+    try:
+        r = json.loads(request.data)
+    except json.JSONDecodeError:
+        return {"status": "JSONDecodeError", "status_code": 1}, 400
+
+    t = elements_index_args_check(r)
+    if type(t[0]) == dict:
+        return t
+    else:
+        index, elements = t  # TODO: использовать
+
+    if 'and/or' not in r:
+        return {"status": "InvalidJSONFormat: and/or not in json", "status_code": 2}, 400
+
+    l = []
+    # for i in ('greater', 'less', 'equal', 'not_equal', 'like'):
+    if 'greater' in r:
+        for j in r['greater']:
+            if j in ('product_id', 'price'):
+                l.append(f'"{j}" > {r["greater"][j]}')
+
+    if 'less' in r:
+        for j in r['less']:
+            if j in ('product_id', 'price'):
+                l.append(f'"{j}" < {r["less"][j]}')
+
+    if 'equal' in r:
+        for j in r['equal']:
+            if j in str_columns:
+                if type(r['equal'][j]) != list:
+                    l.append(f'{j} = \'{r["equal"][j]}\'')
+                else:
+                    for i in r['equal'][j]:
+                        l.append(f'{j} = \'{i}\'')
+            else:
+                if type(r['equal'][j]) != list:
+                    l.append(f'{j} = {r["equal"][j]}')
+                else:
+                    for i in r['equal'][j]:
+                        l.append(f'{j} = {i}')
+
+    if 'not_equal' in r:
+        for j in r['not_equal']:
+            if j in str_columns:
+                if type(r['not_equal'][j]) != list:
+                    l.append(f'not({j} = \'{r["not_equal"][j]}\')')
+                else:
+                    for i in r['not_equal'][j]:
+                        l.append(f'not({j} = \'{i}\')')
+            else:
+                if type(r['not_equal'][j]) != list:
+                    l.append(f'not({j} = {r["not_equal"][j]})')
+                else:
+                    for i in r['not_equal'][j]:
+                        l.append(f'not({j} = {i})')
+
+    if 'like' in r:
+        for j in r['like']:
+            if j in str_columns:
+                if type(r['like'][j]) != list:
+                    l.append(f'{j} like \'{r["like"][j]}\'')
+                else:
+                    for i in r['like'][j]:
+                        l.append(f'{j} like \'{i}\'')
+
+    if len(l) == 0:
+        return {"status": "InvalidJSONFormat: empty request", "status_code": 2}, 400
+
+    try:
+        if r['and/or'].lower() == 'and':
+            cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
+                           f"WHERE {' and '.join([i for i in l])}; ")
+        elif r['and/or'].lower() == 'or':
+            cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
+                           f"WHERE {' or '.join([i for i in l])}; ")
+        else:
+            return {"status": "InvalidJSONFormat: and/or is not correct", "status_code": 2}, 400
+    except psycopg2.errors.NotNullViolation:
+        return {"status": "NotNullViolation", "status_code": 3}, 400
+    except psycopg2.errors.InvalidTextRepresentation:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+
+
+    rows = cursor.fetchall()
+    return {
+               "status": "OK",
+               "status_code": 0,
+               "data": {
+                   "rows": len(rows),
+                   'data': [{
+                       "product_id": row[0],
+                       'product_name': row[1],
+                       'category': row[2],
+                       'sku': row[3],
+                       'price': row[4],
+                   } for row in rows]
+               }
+           }, 200
 
 
 @app.route('/goods/batch', methods=["GET"])
@@ -67,23 +213,22 @@ def batch_get():
     else:
         index, elements = t
 
-    cursor.execute("SELECT COUNT(*) FROM goods")
-    rows = cursor.fetchall()[0][0]
     cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
                    f"ORDER BY product_id LIMIT {elements} OFFSET {index}")
 
+    rows = cursor.fetchall()
     return {
                "status": "OK",
                "status_code": 0,
                "data": {
-                   "rows": rows,
+                   "rows": len(rows),
                    'data': [{
                        "product_id": row[0],
                        'product_name': row[1],
                        'category': row[2],
                        'sku': row[3],
                        'price': row[4],
-                   } for row in cursor.fetchall()]
+                   } for row in rows]
                }
            }, 200
 
@@ -96,16 +241,16 @@ def element_get():
     #     'index': 0
     # }
     # {
-    #     'id': 123
+    #     'product_id': 123
     # }
     try:
         r = json.loads(request.data)
     except json.JSONDecodeError:
         return {"status": "JSONDecodeError", "status_code": 1}, 400
 
-    if 'sku' not in r and 'id' not in r:
+    if 'sku' not in r and 'product_id' not in r:
         return {"status": "InvalidJSONFormat: sku and id not in json", "status_code": 2}, 400
-    elif 'sku' in r and 'id' in r:
+    elif 'sku' in r and 'product_id' in r:
         return {"status": "InvalidJSONFormat: sku and id in json at the same time", "status_code": 2}, 400
 
     # sku
@@ -139,10 +284,10 @@ def element_get():
 
     # id
     else:
-        if not str(r['id']).isdigit():
+        if not str(r['product_id']).isdigit():
             return {"status": "JSONDecodeError: id is not digit", "status_code": 1}, 400
         else:
-            ID = int(r['id'])
+            ID = int(r['product_id'])
 
         cursor.execute(f"SELECT product_id, product_name, category, sku, price FROM goods WHERE product_id = {ID}")
         return {
@@ -232,6 +377,7 @@ def batch_post():
         return {"status": "InvalidJSONFormat", "status_code": 2}, 400
     status = 201
     l = []
+    j = 0
     for i in r:
         row = add_row(i)
         if row[1] == 400:
@@ -240,6 +386,9 @@ def batch_post():
             'data': row[0],
             'HTTP_status_code': row[1]
         })
+        j += 1
+        if j > max_request_per_batch:
+            break
     return {
                "status": "OK",
                "status_code": 0,
@@ -337,6 +486,7 @@ def batch_put():
         return {"status": "InvalidJSONFormat", "status_code": 2}, 400
     status = 200
     l = []
+    j = 0
     for i in r:
         row = edit_row(i)
         if row[1] == 400:
@@ -345,6 +495,9 @@ def batch_put():
             'data': row[0],
             'HTTP_status_code': row[1]
         })
+        j += 1
+        if j > max_request_per_batch:
+            break
     return {
                "status": "OK",
                "status_code": 0,
@@ -358,7 +511,7 @@ def element_delete():
     #     'sku': 213
     # }
     # {
-    #     'id': 123
+    #     'product_id': 123
     # }
     try:
         r = json.loads(request.data)
@@ -368,9 +521,9 @@ def element_delete():
 
 
 def delete_row(r: dict):
-    if 'sku' not in r and 'id' not in r:
+    if 'sku' not in r and 'product_id' not in r:
         return {"status": "InvalidJSONFormat: sku and id not in json", "status_code": 2}, 400
-    elif 'sku' in r and 'id' in r:
+    elif 'sku' in r and 'product_id' in r:
         return {"status": "InvalidJSONFormat: sku and id in json at the same time", "status_code": 2}, 400
 
     # sku
@@ -387,10 +540,10 @@ def delete_row(r: dict):
 
     # id
     else:
-        if not str(r['id']).isdigit():
+        if not str(r['product_id']).isdigit():
             return {"status": "JSONDecodeError: id is not digit", "status_code": 1}, 400
         else:
-            ID = int(r['id'])
+            ID = int(r['product_id'])
 
         cursor.execute(f"SELECT COUNT(*) FROM goods WHERE product_id = {ID}")
         rows = cursor.fetchall()[0][0]
@@ -422,6 +575,7 @@ def batch_delete():
         return {"status": "InvalidJSONFormat", "status_code": 2}, 400
     status = 200
     l = []
+    j = 0
     for i in r:
         row = delete_row(i)
         if row[1] == 400:
@@ -430,6 +584,9 @@ def batch_delete():
             'data': row[0],
             'HTTP_status_code': row[1]
         })
+        j += 1
+        if j > max_request_per_batch:
+            break
     return {
                "status": "OK",
                "status_code": 0,
@@ -438,7 +595,8 @@ def batch_delete():
 
 
 def main():
-    app.run()
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=config["Settings"]["server_port"])
 
 
 if __name__ == '__main__':
