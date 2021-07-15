@@ -110,74 +110,73 @@ def request_data():  # TODO: это огромная дыра в безопас�
     if 'and/or' not in r:
         return {"status": "InvalidJSONFormat: and/or not in json", "status_code": 2}, 400
 
-    l = []
+    lst = []
     # for i in ('greater', 'less', 'equal', 'not_equal', 'like'):
     if 'greater' in r:
         for j in r['greater']:
             if j in ('product_id', 'price'):
-                l.append(f'"{j}" > {r["greater"][j]}')
+                lst.append(f'"{j}" > {r["greater"][j]}')
 
     if 'less' in r:
         for j in r['less']:
             if j in ('product_id', 'price'):
-                l.append(f'"{j}" < {r["less"][j]}')
+                lst.append(f'"{j}" < {r["less"][j]}')
 
     if 'equal' in r:
         for j in r['equal']:
             if j in str_columns:
                 if type(r['equal'][j]) != list:
-                    l.append(f'{j} = \'{r["equal"][j]}\'')
+                    lst.append(f'{j} = \'{r["equal"][j]}\'')
                 else:
                     for i in r['equal'][j]:
-                        l.append(f'{j} = \'{i}\'')
+                        lst.append(f'{j} = \'{i}\'')
             else:
                 if type(r['equal'][j]) != list:
-                    l.append(f'{j} = {r["equal"][j]}')
+                    lst.append(f'{j} = {r["equal"][j]}')
                 else:
                     for i in r['equal'][j]:
-                        l.append(f'{j} = {i}')
+                        lst.append(f'{j} = {i}')
 
     if 'not_equal' in r:
         for j in r['not_equal']:
             if j in str_columns:
                 if type(r['not_equal'][j]) != list:
-                    l.append(f'not({j} = \'{r["not_equal"][j]}\')')
+                    lst.append(f'not({j} = \'{r["not_equal"][j]}\')')
                 else:
                     for i in r['not_equal'][j]:
-                        l.append(f'not({j} = \'{i}\')')
+                        lst.append(f'not({j} = \'{i}\')')
             else:
                 if type(r['not_equal'][j]) != list:
-                    l.append(f'not({j} = {r["not_equal"][j]})')
+                    lst.append(f'not({j} = {r["not_equal"][j]})')
                 else:
                     for i in r['not_equal'][j]:
-                        l.append(f'not({j} = {i})')
+                        lst.append(f'not({j} = {i})')
 
     if 'like' in r:
         for j in r['like']:
             if j in str_columns:
                 if type(r['like'][j]) != list:
-                    l.append(f'{j} like \'{r["like"][j]}\'')
+                    lst.append(f'{j} like \'{r["like"][j]}\'')
                 else:
                     for i in r['like'][j]:
-                        l.append(f'{j} like \'{i}\'')
+                        lst.append(f'{j} like \'{i}\'')
 
-    if len(l) == 0:
+    if len(lst) == 0:
         return {"status": "InvalidJSONFormat: empty request", "status_code": 2}, 400
 
     try:
         if r['and/or'].lower() == 'and':
             cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                           f"WHERE {' and '.join([i for i in l])}; ")
+                           f"WHERE {' and '.join([i for i in lst])}; ")
         elif r['and/or'].lower() == 'or':
             cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                           f"WHERE {' or '.join([i for i in l])}; ")
+                           f"WHERE {' or '.join([i for i in lst])}; ")
         else:
             return {"status": "InvalidJSONFormat: and/or is not correct", "status_code": 2}, 400
     except psycopg2.errors.NotNullViolation:
         return {"status": "NotNullViolation", "status_code": 3}, 400
     except psycopg2.errors.InvalidTextRepresentation:
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
-
 
     rows = cursor.fetchall()
     return {
@@ -287,9 +286,9 @@ def element_get():
         if not str(r['product_id']).isdigit():
             return {"status": "JSONDecodeError: id is not digit", "status_code": 1}, 400
         else:
-            ID = int(r['product_id'])
+            pid = int(r['product_id'])
 
-        cursor.execute(f"SELECT product_id, product_name, category, sku, price FROM goods WHERE product_id = {ID}")
+        cursor.execute(f"SELECT product_id, product_name, category, sku, price FROM goods WHERE product_id = {pid}")
         return {
                    "status": "OK",
                    "status_code": 0,
@@ -376,13 +375,13 @@ def batch_post():
     if type(r) != list:
         return {"status": "InvalidJSONFormat", "status_code": 2}, 400
     status = 201
-    l = []
+    lst = []
     j = 0
     for i in r:
         row = add_row(i)
         if row[1] == 400:
             status = 207
-        l.append({
+        lst.append({
             'data': row[0],
             'HTTP_status_code': row[1]
         })
@@ -392,7 +391,7 @@ def batch_post():
     return {
                "status": "OK",
                "status_code": 0,
-               "data": l
+               "data": lst
             }, status
 
 
@@ -485,13 +484,13 @@ def batch_put():
     if type(r) != list:
         return {"status": "InvalidJSONFormat", "status_code": 2}, 400
     status = 200
-    l = []
+    lst = []
     j = 0
     for i in r:
         row = edit_row(i)
         if row[1] == 400:
             status = 207
-        l.append({
+        lst.append({
             'data': row[0],
             'HTTP_status_code': row[1]
         })
@@ -501,7 +500,7 @@ def batch_put():
     return {
                "status": "OK",
                "status_code": 0,
-               "data": l
+               "data": lst
             }, status
 
 
@@ -543,11 +542,11 @@ def delete_row(r: dict):
         if not str(r['product_id']).isdigit():
             return {"status": "JSONDecodeError: id is not digit", "status_code": 1}, 400
         else:
-            ID = int(r['product_id'])
+            pid = int(r['product_id'])
 
-        cursor.execute(f"SELECT COUNT(*) FROM goods WHERE product_id = {ID}")
+        cursor.execute(f"SELECT COUNT(*) FROM goods WHERE product_id = {pid}")
         rows = cursor.fetchall()[0][0]
-        cursor.execute(f"DELETE FROM goods WHERE product_id = {ID}")
+        cursor.execute(f"DELETE FROM goods WHERE product_id = {pid}")
 
         return {
                    "status": "OK",
@@ -574,13 +573,13 @@ def batch_delete():
     if type(r) != list:
         return {"status": "InvalidJSONFormat", "status_code": 2}, 400
     status = 200
-    l = []
+    lst = []
     j = 0
     for i in r:
         row = delete_row(i)
         if row[1] == 400:
             status = 207
-        l.append({
+        lst.append({
             'data': row[0],
             'HTTP_status_code': row[1]
         })
@@ -590,7 +589,7 @@ def batch_delete():
     return {
                "status": "OK",
                "status_code": 0,
-               "data": l
+               "data": lst
             }, status
 
 
