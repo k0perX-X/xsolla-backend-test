@@ -303,7 +303,7 @@ paths:
     get:
       tags:
         - request
-      summary: Removes products in the database
+      summary: Retrieving products from the database
       operationId: batch_get
       requestBody:
         content:
@@ -314,8 +314,7 @@ paths:
                 $ref: '#/components/schemas/batch_get'
         required: true
       description: >-
-        Removes records in the database. In fact, these are several single
-        requests collected in an array.
+         Retrieving all records from the database in the order of id.
       responses:
         '200':
           description: OK
@@ -423,7 +422,7 @@ paths:
     get:
       tags:
         - request
-      summary: Removes products in the database
+      summary: Search for products in the database
       operationId: request_data
       requestBody:
         content:
@@ -432,8 +431,7 @@ paths:
               $ref: '#/components/schemas/request_data'
         required: true
       description: >-
-        Removes records in the database. In fact, these are several single
-        requests collected in an array.
+        Allows you to search the database using the operators >, <, =, ≠ and like(works like in SQL).
       responses:
         '200':
           description: OK
