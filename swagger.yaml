@@ -3,7 +3,7 @@ info:
   description: >-
     Документация OpenAPI 3.0 для тестового задания в Xsolla School
     2021 Backend.
-  version: "0.3.2"
+  version: "0.3.3"
   title: Xsolla School 2021. Backend
   contact:
     email: kolya-perminov@ya.ru
@@ -53,9 +53,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/element_put'
+              oneOf:
+                - $ref: '#/components/schemas/element_put_id'
+                - $ref: '#/components/schemas/element_put_sku'
         required: true
-      description: Edits one record in the database
+      description: Edits one record in the database. Allows you to search by both sku and product_id.
       responses:
         '200':
           description: OK
@@ -227,7 +229,9 @@ paths:
             schema:
               type: array
               items:
-                $ref: '#/components/schemas/element_put'
+                oneOf:
+                  - $ref: '#/components/schemas/element_put_id'
+                  - $ref: '#/components/schemas/element_put_sku'
         required: true
       description: >-
         Edits records in the database. In fact, these are several single
@@ -309,9 +313,7 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/batch_get'
+              $ref: '#/components/schemas/batch_get'
         required: true
       description: >-
          Retrieving all records from the database in the order of id.
@@ -468,6 +470,7 @@ components:
             One of: 0 - OK, 1 - JSONDecodeError, 2 - InvalidJSONFormat, 3 -
             NotNullViolation, 4 - InvalidTextRepresentation, 5 - IdNotInTable
 
+
     row:
       type: object
       properties:
@@ -507,7 +510,7 @@ components:
           format: double
           example: 1.1
 
-    element_put:
+    element_put_id:
       type: object
       required:
         - product_id
@@ -516,6 +519,31 @@ components:
         product_id:
           type: integer
           format: int64
+        edit_data:
+          type: object
+          properties:
+            product_name:
+              type: string
+              format: string
+            category:
+              type: string
+              format: string
+            sku:
+              type: string
+              format: string
+            price:
+              type: number
+              format: double
+              example: 1.1
+
+    element_put_sku:
+      type: object
+      required:
+        - sku
+        - edit_data
+      properties:
+        sku:
+          type: string
         edit_data:
           type: object
           properties:
@@ -607,9 +635,11 @@ components:
           format: byte
           example: 0
         data:
-          allOf:
-            - description: Resulting record
-            - $ref: '#/components/schemas/row'
+          type: array
+          items:
+            allOf:
+              - description: Resulting record
+              - $ref: '#/components/schemas/row'
 
     element_get_200:
       type: object

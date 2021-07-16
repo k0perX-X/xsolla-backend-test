@@ -28,6 +28,8 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS goods (
 
 # TODO: отправить огромное количество запросов
 # TODO: apiTokens
+# TODO: рефакторинг
+# TODO: проверка типа данных
 
 # Status codes:
 # 0 - OK
@@ -408,6 +410,15 @@ def element_put():
     #         'price': 300
     #     }
     # }
+    # {
+    #     'sku': '1203',
+    #     'edit_data': {
+    #         'product_name': '123',
+    #         'category': None,
+    #         'sku': "123",
+    #         'price': 300
+    #     }
+    # }
     try:
         r = json.loads(request.data)
     except json.JSONDecodeError:
@@ -415,9 +426,9 @@ def element_put():
     return edit_row(r)
 
 
-def edit_row(r: dict):
-    if 'product_id' not in r or 'edit_data' not in r:
-        return {"status": "InvalidJSONFormat: product_id or edit_data not in json", "status_code": 2}, 400
+def edit_row(r: dict):   # TODO: sku
+    if 'edit_data' not in r:
+        return {"status": "InvalidJSONFormat: edit_data not in json", "status_code": 2}, 400
     if type(r['edit_data']) != dict:
         return {"status": "InvalidJSONFormat: edit_data is not dictionary", "status_code": 2}, 400
     delete_keys = []
@@ -429,31 +440,63 @@ def edit_row(r: dict):
     if len(r['edit_data']) < 1:
         return {"status": "InvalidJSONFormat: edit_data does not contain required fields", "status_code": 2}, 400
 
-    try:
-        cursor.execute("SELECT COUNT(*) FROM goods WHERE product_id = %s;", [r['product_id']])
-        if cursor.fetchall()[0][0] == 0:
-            return {"status": "IdNotInTable", "status_code": 5}, 400
-        cursor.execute(f"UPDATE goods SET {', '.join([i + ' = %s' for i in r['edit_data'].keys()])} "
-                       "WHERE product_id = %s; "
-                       "SELECT product_id, product_name, category, sku, price FROM goods WHERE product_id = %s;",
-                       [*r['edit_data'].values(), r['product_id'], r['product_id']])
-    except psycopg2.errors.NotNullViolation:
-        return {"status": "NotNullViolation", "status_code": 3}, 400
-    except psycopg2.errors.InvalidTextRepresentation:
-        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+    if 'sku' not in r and 'product_id' not in r:
+        return {"status": "InvalidJSONFormat: sku and id not in json", "status_code": 2}, 400
+    elif 'sku' in r and 'product_id' in r:
+        return {"status": "InvalidJSONFormat: sku and id in json at the same time", "status_code": 2}, 400
 
-    row = cursor.fetchall()[0]
-    return {
-               "status": "OK",
-               "status_code": 0,
-               "data": {
-                   "product_id": row[0],
-                   'product_name': row[1],
-                   'category': row[2],
-                   'sku': row[3],
-                   'price': row[4],
-               }
-           }, 200
+    if 'product_id' in r:
+        try:
+            cursor.execute("SELECT COUNT(*) FROM goods WHERE product_id = %s;", [r['product_id']])
+            if cursor.fetchall()[0][0] == 0:
+                return {"status": "IdNotInTable", "status_code": 5}, 400
+            cursor.execute(f"UPDATE goods SET {', '.join([i + ' = %s' for i in r['edit_data'].keys()])} "
+                           "WHERE product_id = %s; "
+                           "SELECT product_id, product_name, category, sku, price FROM goods WHERE product_id = %s;",
+                           [*r['edit_data'].values(), r['product_id'], r['product_id']])
+        except psycopg2.errors.NotNullViolation:
+            return {"status": "NotNullViolation", "status_code": 3}, 400
+        except psycopg2.errors.InvalidTextRepresentation:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+
+        row = cursor.fetchall()[0]
+        return {
+                   "status": "OK",
+                   "status_code": 0,
+                   "data": [{
+                       "product_id": row[0],
+                       'product_name': row[1],
+                       'category': row[2],
+                       'sku': row[3],
+                       'price': row[4],
+                   }]
+               }, 200
+    else:
+        try:
+            cursor.execute("SELECT COUNT(*) FROM goods WHERE sku = %s;", [r['sku']])
+            if cursor.fetchall()[0][0] == 0:
+                return {"status": "IdNotInTable", "status_code": 5}, 400
+            cursor.execute(f"UPDATE goods SET {', '.join([i + ' = %s' for i in r['edit_data'].keys()])} "
+                           "WHERE sku = %s; "
+                           "SELECT product_id, product_name, category, sku, price FROM goods WHERE sku = %s;",
+                           [*r['edit_data'].values(), r['sku'], r['sku']])
+        except psycopg2.errors.NotNullViolation:
+            return {"status": "NotNullViolation", "status_code": 3}, 400
+        except psycopg2.errors.InvalidTextRepresentation:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+
+        return {
+                   "status": "OK",
+                   "status_code": 0,
+                   "data": [{
+                       "product_id": row[0],
+                       'product_name': row[1],
+                       'category': row[2],
+                       'sku': row[3],
+                       'price': row[4],
+                   } for row in cursor.fetchall()]
+               }, 200
+
 
 
 @app.route('/goods/batch', methods=["PUT"])
