@@ -28,8 +28,7 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS goods (
 
 # TODO: отправить огромное количество запросов
 # TODO: apiTokens
-# TODO: рефакторинг
-# TODO: проверка типа данных
+# TODO: Тестирование по черному ящику
 
 # Status codes:
 # 0 - OK
@@ -65,7 +64,7 @@ def elements_index_args_check(r: dict) -> tuple:
 
 
 @app.route('/goods/request')
-def request_data():  # TODO: это огромная дыра в безопасности
+def request_data():
     # {
     #     'greater': {
     #         'product_id': 123,
@@ -112,74 +111,81 @@ def request_data():  # TODO: это огромная дыра в безопас�
     if 'and/or' not in r:
         return {"status": "InvalidJSONFormat: and/or not in json", "status_code": 2}, 400
 
+    for i in r:
+        if type(r[i]) == dict:
+            for j in r[i]:
+                if j in str_columns:
+                    if type(r[i][j]) == int:
+                        r[i][j] = str(r[i][j])
+                    elif type(r[i][j]) == list:
+                        for g in range(len(r[i][j])):
+                            r[i][j][g] = str(r[i][j][g])
+
+    requests = []
     lst = []
     # for i in ('greater', 'less', 'equal', 'not_equal', 'like'):
     if 'greater' in r:
         for j in r['greater']:
             if j in ('product_id', 'price'):
-                lst.append(f'"{j}" > {r["greater"][j]}')
+                requests.append(f'"{j}" > %s')
+                lst.append(r["greater"][j])
 
     if 'less' in r:
         for j in r['less']:
             if j in ('product_id', 'price'):
-                lst.append(f'"{j}" < {r["less"][j]}')
+                requests.append(f'"{j}" < %s')
+                lst.append(r["less"][j])
 
     if 'equal' in r:
         for j in r['equal']:
-            if j in str_columns:
-                if type(r['equal'][j]) != list:
-                    lst.append(f'{j} = \'{r["equal"][j]}\'')
-                else:
-                    for i in r['equal'][j]:
-                        lst.append(f'{j} = \'{i}\'')
+            if type(r['equal'][j]) != list:
+                requests.append(f'"{j}" = %s')
+                lst.append(r["equal"][j])
             else:
-                if type(r['equal'][j]) != list:
-                    lst.append(f'{j} = {r["equal"][j]}')
-                else:
-                    for i in r['equal'][j]:
-                        lst.append(f'{j} = {i}')
+                for i in r['equal'][j]:
+                    requests.append(f'"{j}" = %s')
+                    lst.append(i)
 
     if 'not_equal' in r:
         for j in r['not_equal']:
-            if j in str_columns:
-                if type(r['not_equal'][j]) != list:
-                    lst.append(f'not({j} = \'{r["not_equal"][j]}\')')
-                else:
-                    for i in r['not_equal'][j]:
-                        lst.append(f'not({j} = \'{i}\')')
+            if type(r['not_equal'][j]) != list:
+                requests.append(f'not({j} = %s)')
+                lst.append(r["not_equal"][j])
             else:
-                if type(r['not_equal'][j]) != list:
-                    lst.append(f'not({j} = {r["not_equal"][j]})')
-                else:
-                    for i in r['not_equal'][j]:
-                        lst.append(f'not({j} = {i})')
+                for i in r['not_equal'][j]:
+                    requests.append(f'not({j} = %s)')
+                    lst.append(i)
 
     if 'like' in r:
         for j in r['like']:
             if j in str_columns:
                 if type(r['like'][j]) != list:
-                    lst.append(f'{j} like \'{r["like"][j]}\'')
+                    requests.append(f'"{j}" like %s')
+                    lst.append(r["like"][j])
                 else:
                     for i in r['like'][j]:
-                        lst.append(f'{j} like \'{i}\'')
+                        requests.append(f'"{j}" like %s')
+                        lst.append(i)
 
-    if len(lst) == 0:
+    if len(requests) == 0:
         return {"status": "InvalidJSONFormat: empty request", "status_code": 2}, 400
 
     try:
         if r['and/or'].lower() == 'and':
             cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                           f"WHERE {' and '.join([i for i in lst])} "
-                           f"ORDER BY product_id LIMIT {elements} OFFSET {index}; ")
+                           f"WHERE {' and '.join([i for i in requests])} "
+                           f"ORDER BY product_id LIMIT {elements} OFFSET {index}; ", lst)
         elif r['and/or'].lower() == 'or':
             cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                           f"WHERE {' or '.join([i for i in lst])} "
-                           f"ORDER BY product_id LIMIT {elements} OFFSET {index}; ")
+                           f"WHERE {' or '.join([i for i in requests])} "
+                           f"ORDER BY product_id LIMIT {elements} OFFSET {index}; ", lst)
         else:
             return {"status": "InvalidJSONFormat: and/or is not correct", "status_code": 2}, 400
     except psycopg2.errors.NotNullViolation:
         return {"status": "NotNullViolation", "status_code": 3}, 400
     except psycopg2.errors.InvalidTextRepresentation:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+    except psycopg2.errors.UndefinedFunction:
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
     rows = cursor.fetchall()
@@ -216,8 +222,15 @@ def batch_get():
     else:
         index, elements = t
 
-    cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                   f"ORDER BY product_id LIMIT {elements} OFFSET {index}")
+    try:
+        cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
+                       f"ORDER BY product_id LIMIT {elements} OFFSET {index}")
+    except psycopg2.errors.NotNullViolation:
+        return {"status": "NotNullViolation", "status_code": 3}, 400
+    except psycopg2.errors.InvalidTextRepresentation:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+    except psycopg2.errors.UndefinedFunction:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
     rows = cursor.fetchall()
     return {
@@ -264,11 +277,18 @@ def element_get():
         else:
             index, elements = t
 
-        cursor.execute(f"SELECT COUNT(*) FROM goods WHERE sku = '{r['sku']}'")
-        rows = cursor.fetchall()[0][0]
-        cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
-                       f"WHERE sku = '{r['sku']}' ORDER BY product_id "
-                       f"LIMIT {elements} OFFSET {index}")
+        try:
+            cursor.execute(f"SELECT COUNT(*) FROM goods WHERE sku = '{r['sku']}'")
+            rows = cursor.fetchall()[0][0]
+            cursor.execute("SELECT product_id, product_name, category, sku, price FROM goods "
+                           f"WHERE sku = '{r['sku']}' ORDER BY product_id "
+                           f"LIMIT {elements} OFFSET {index}")
+        except psycopg2.errors.NotNullViolation:
+            return {"status": "NotNullViolation", "status_code": 3}, 400
+        except psycopg2.errors.InvalidTextRepresentation:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {
                    "status": "OK",
@@ -288,7 +308,7 @@ def element_get():
     # id
     else:
         if not str(r['product_id']).isdigit():
-            return {"status": "JSONDecodeError: id is not digit", "status_code": 1}, 400
+            return {"status": "InvalidJSONFormat: product_id is not digit", "status_code": 2}, 400
         else:
             pid = int(r['product_id'])
 
@@ -339,6 +359,8 @@ def add_row(r: dict):
     except psycopg2.errors.NotNullViolation:
         return {"status": "NotNullViolation", "status_code": 3}, 400
     except psycopg2.errors.InvalidTextRepresentation:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+    except psycopg2.errors.UndefinedFunction:
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
     row = cursor.fetchall()[0]
@@ -426,7 +448,7 @@ def element_put():
     return edit_row(r)
 
 
-def edit_row(r: dict):   # TODO: sku
+def edit_row(r: dict):
     if 'edit_data' not in r:
         return {"status": "InvalidJSONFormat: edit_data not in json", "status_code": 2}, 400
     if type(r['edit_data']) != dict:
@@ -458,6 +480,8 @@ def edit_row(r: dict):   # TODO: sku
             return {"status": "NotNullViolation", "status_code": 3}, 400
         except psycopg2.errors.InvalidTextRepresentation:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         row = cursor.fetchall()[0]
         return {
@@ -484,6 +508,8 @@ def edit_row(r: dict):   # TODO: sku
             return {"status": "NotNullViolation", "status_code": 3}, 400
         except psycopg2.errors.InvalidTextRepresentation:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {
                    "status": "OK",
@@ -496,7 +522,6 @@ def edit_row(r: dict):   # TODO: sku
                        'price': row[4],
                    } for row in cursor.fetchall()]
                }, 200
-
 
 
 @app.route('/goods/batch', methods=["PUT"])
@@ -572,9 +597,16 @@ def delete_row(r: dict):
 
     # sku
     elif 'sku' in r:
-        cursor.execute(f"SELECT COUNT(*) FROM goods WHERE sku = '{r['sku']}'")
-        rows = cursor.fetchall()[0][0]
-        cursor.execute(f"DELETE FROM goods WHERE sku = '{r['sku']}'")
+        try:
+            cursor.execute(f"SELECT COUNT(*) FROM goods WHERE sku = '{r['sku']}'")
+            rows = cursor.fetchall()[0][0]
+            cursor.execute(f"DELETE FROM goods WHERE sku = '{r['sku']}'")
+        except psycopg2.errors.NotNullViolation:
+            return {"status": "NotNullViolation", "status_code": 3}, 400
+        except psycopg2.errors.InvalidTextRepresentation:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {
                    "status": "OK",
@@ -585,13 +617,20 @@ def delete_row(r: dict):
     # id
     else:
         if not str(r['product_id']).isdigit():
-            return {"status": "JSONDecodeError: id is not digit", "status_code": 1}, 400
+            return {"status": "InvalidJSONFormat: id is not digit", "status_code": 2}, 400
         else:
             pid = int(r['product_id'])
 
-        cursor.execute(f"SELECT COUNT(*) FROM goods WHERE product_id = {pid}")
-        rows = cursor.fetchall()[0][0]
-        cursor.execute(f"DELETE FROM goods WHERE product_id = {pid}")
+        try:
+            cursor.execute(f"SELECT COUNT(*) FROM goods WHERE product_id = {pid}")
+            rows = cursor.fetchall()[0][0]
+            cursor.execute(f"DELETE FROM goods WHERE product_id = {pid}")
+        except psycopg2.errors.NotNullViolation:
+            return {"status": "NotNullViolation", "status_code": 3}, 400
+        except psycopg2.errors.InvalidTextRepresentation:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {
                    "status": "OK",

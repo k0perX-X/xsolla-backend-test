@@ -7,7 +7,7 @@ from multiprocessing.pool import Pool
 max_request_per_batch = 100
 max_elements_per_request = 2000
 
-url = 'xsolla.jelastic.regruhosting.ru'  # 'localhost'  #
+url = 'localhost'  # 'xsolla.jelastic.regruhosting.ru'  #
 
 
 class Tests(unittest.TestCase):
@@ -102,7 +102,6 @@ class Tests(unittest.TestCase):
         j = json.loads(r.text)
         pprint(j)
         self.assertEqual(r.status_code, 400)
-
 
     def test_get_element(self):
         r = requests.get(f'http://{url}/goods/element', json={
@@ -209,7 +208,6 @@ class Tests(unittest.TestCase):
         j = json.loads(r.text)
         pprint(j)
         self.assertEqual(r.status_code, 400)
-
 
     def test_put_batch(self):
         r = requests.post(f'http://{url}/goods/element', json={
@@ -475,9 +473,9 @@ class Tests(unittest.TestCase):
             'index': 0
         })
         print(r)
+        self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
         pprint(j)
-        self.assertEqual(r.status_code, 200)
         self.assertEqual(len(j['data']['data']), 2)
         r = requests.get(f'http://{url}/goods/request', json={
             # 'greater': {
@@ -510,9 +508,9 @@ class Tests(unittest.TestCase):
             'index': 0
         })
         print(r)
+        self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
         pprint(j)
-        self.assertEqual(r.status_code, 200)
         self.assertEqual(len(j['data']['data']), 2)
         r = requests.get(f'http://{url}/goods/request', json={
             # 'greater': {
@@ -545,9 +543,9 @@ class Tests(unittest.TestCase):
             'index': 0
         })
         print(r)
+        self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
         pprint(j)
-        self.assertEqual(r.status_code, 200)
         self.assertEqual(len(j['data']['data']), 1)
         r = requests.get(f'http://{url}/goods/request', json={
             'greater': {
@@ -580,9 +578,9 @@ class Tests(unittest.TestCase):
             'index': 0
         })
         print(r)
+        self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
         pprint(j)
-        self.assertEqual(r.status_code, 200)
         self.assertEqual(len(j['data']['data']), 2)
 
     @staticmethod
