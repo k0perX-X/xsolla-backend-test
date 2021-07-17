@@ -26,9 +26,7 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS goods (
     price real NOT NULL,
     PRIMARY KEY (product_id));""")
 
-# TODO: отправить огромное количество запросов
 # TODO: apiTokens
-# TODO: Тестирование по черному ящику
 
 # Status codes:
 # 0 - OK
@@ -187,6 +185,8 @@ def request_data():
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
     except psycopg2.errors.UndefinedFunction:
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+    except psycopg2.ProgrammingError:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
     rows = cursor.fetchall()
     return {
@@ -231,6 +231,8 @@ def batch_get():
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
     except psycopg2.errors.UndefinedFunction:
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+    except psycopg2.ProgrammingError:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
     rows = cursor.fetchall()
     return {
@@ -271,6 +273,8 @@ def element_get():
 
     # sku
     elif 'sku' in r:
+        if type(r['sku']) != str and type(r['sku']) != int:
+            return {"status": "InvalidJSONFormat: sku is not int or str", "status_code": 2}, 400
         t = elements_index_args_check(r)
         if type(t[0]) == dict:
             return t
@@ -288,6 +292,8 @@ def element_get():
         except psycopg2.errors.InvalidTextRepresentation:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
         except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.ProgrammingError:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {
@@ -349,6 +355,14 @@ def add_row(r: dict):
     if 'product_name' not in r or 'category' not in r or 'sku' not in r or 'price' not in r:
         return {"status": "InvalidJSONFormat: product_name or category or sku or price not in json",
                 "status_code": 2}, 400
+    if type(r['sku']) != str and type(r['sku']) != int:
+        return {"status": "InvalidJSONFormat: sku is not int or str", "status_code": 2}, 400
+    if type(r['product_name']) != str and r['product_name'] is not None:
+        return {"status": "InvalidJSONFormat: product_name is not str", "status_code": 2}, 400
+    if type(r['category']) != str and r['category'] is not None:
+        return {"status": "InvalidJSONFormat: category is not str", "status_code": 2}, 400
+    if type(r['price']) != int:
+        return {"status": "InvalidJSONFormat: category is not int", "status_code": 2}, 400
 
     try:
         cursor.execute("INSERT INTO goods (product_name,category,sku,price) "
@@ -361,6 +375,8 @@ def add_row(r: dict):
     except psycopg2.errors.InvalidTextRepresentation:
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
     except psycopg2.errors.UndefinedFunction:
+        return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+    except psycopg2.ProgrammingError:
         return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
     row = cursor.fetchall()[0]
@@ -467,6 +483,19 @@ def edit_row(r: dict):
     elif 'sku' in r and 'product_id' in r:
         return {"status": "InvalidJSONFormat: sku and id in json at the same time", "status_code": 2}, 400
 
+    if 'sku' in r['edit_data']:
+        if type(r['edit_data']['sku']) != str and type(r['edit_data']['sku']) != int:
+            return {"status": "InvalidJSONFormat: sku is not int or str", "status_code": 2}, 400
+    if 'product_name' in r['edit_data']:
+        if type(r['edit_data']['product_name']) != str and r['edit_data']['product_name'] is not None:
+            return {"status": "InvalidJSONFormat: product_name is not str", "status_code": 2}, 400
+    if 'category' in r['edit_data']:
+        if type(r['edit_data']['category']) != str and r['edit_data']['category'] is not None:
+            return {"status": "InvalidJSONFormat: category is not str", "status_code": 2}, 400
+    if 'price' in r['edit_data']:
+        if type(r['edit_data']['price']) != int:
+            return {"status": "InvalidJSONFormat: category is not int", "status_code": 2}, 400
+
     if 'product_id' in r:
         try:
             cursor.execute("SELECT COUNT(*) FROM goods WHERE product_id = %s;", [r['product_id']])
@@ -481,6 +510,8 @@ def edit_row(r: dict):
         except psycopg2.errors.InvalidTextRepresentation:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
         except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.ProgrammingError:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         row = cursor.fetchall()[0]
@@ -509,6 +540,8 @@ def edit_row(r: dict):
         except psycopg2.errors.InvalidTextRepresentation:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
         except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.ProgrammingError:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {
@@ -597,6 +630,8 @@ def delete_row(r: dict):
 
     # sku
     elif 'sku' in r:
+        if type(r['sku']) != str and type(r['sku']) != int:
+            return {"status": "InvalidJSONFormat: sku is not int or str", "status_code": 2}, 400
         try:
             cursor.execute(f"SELECT COUNT(*) FROM goods WHERE sku = '{r['sku']}'")
             rows = cursor.fetchall()[0][0]
@@ -606,6 +641,8 @@ def delete_row(r: dict):
         except psycopg2.errors.InvalidTextRepresentation:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
         except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.ProgrammingError:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {
@@ -630,6 +667,8 @@ def delete_row(r: dict):
         except psycopg2.errors.InvalidTextRepresentation:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
         except psycopg2.errors.UndefinedFunction:
+            return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
+        except psycopg2.ProgrammingError:
             return {"status": "InvalidTextRepresentation", "status_code": 4}, 400
 
         return {

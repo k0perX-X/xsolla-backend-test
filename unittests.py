@@ -34,6 +34,53 @@ class Tests(unittest.TestCase):
         pprint(j2)
         self.assertEqual(r.status_code, 201)
         self.assertEqual(j1['data']['product_id'] + 1, j2['data']['product_id'])
+        r = requests.post(f'http://{url}/goods/element', json={
+            'product_name': None,
+            'category': None,
+            'sku': None,
+            'price': 300
+        })
+        print(r)
+        self.assertEqual(r.status_code, 400)
+        j1 = json.loads(r.text)
+        pprint(j1)
+        r = requests.post(f'http://{url}/goods/element', json={
+            'price': 300
+        })
+        print(r)
+        self.assertEqual(r.status_code, 400)
+        j1 = json.loads(r.text)
+        pprint(j1)
+        r = requests.post(f'http://{url}/goods/element', json={
+            'product_name': "123",
+            'category': None,
+            'sku': ["123"],
+            'price': 300
+        })
+        print(r)
+        j1 = json.loads(r.text)
+        pprint(j1)
+        self.assertEqual(r.status_code, 400)
+        r = requests.post(f'http://{url}/goods/element', json={
+            'product_name': "123",
+            'category': None,
+            'sku': "None",
+            'price': None
+        })
+        print(r)
+        self.assertEqual(r.status_code, 400)
+        j1 = json.loads(r.text)
+        pprint(j1)
+        r = requests.post(f'http://{url}/goods/element', json={
+            'product_name': "123",
+            'category': None,
+            'sku': {"None": None},
+            'price': {300: 150}
+        })
+        print(r)
+        self.assertEqual(r.status_code, 400)
+        j1 = json.loads(r.text)
+        pprint(j1)
 
     def test_post_batch(self):
         r = requests.post(f'http://{url}/goods/batch', json=[{
@@ -62,6 +109,35 @@ class Tests(unittest.TestCase):
         pprint(j2)
         self.assertEqual(r.status_code, 201)
         self.assertEqual(j1['data'][0]['data']['data']['product_id'] + 2, j2['data'][1]['data']['data']['product_id'])
+        r = requests.post(f'http://{url}/goods/batch', json=[{
+            'product_name': None,
+            'category': None,
+            'sku': None,
+            'price': 300
+        }, {
+            'price': 300
+        }, {
+            'product_name': "123",
+            'category': None,
+            'sku': ["123"],
+            'price': 300
+        }, {
+            'product_name': "123",
+            'category': None,
+            'sku': "None",
+            'price': None
+        }, {
+            'product_name': "123",
+            'category': None,
+            'sku': {"None": None},
+            'price': {300: 150}
+        }])
+        print(r)
+        self.assertEqual(r.status_code, 207)
+        j1 = json.loads(r.text)
+        pprint(j1)
+        for i in j1['data']:
+            self.assertEqual(i['HTTP_status_code'], 400)
 
     def test_post_batch10000(self):
         r = requests.post(f'http://{url}/goods/batch', json=[{
